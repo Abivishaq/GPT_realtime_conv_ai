@@ -10,6 +10,29 @@ import numpy as np
 from collections import deque
 import time
 
+class InteractionAnalyzer:
+    def __init__(self):
+        self.person_audio_chunk_size = 0
+        self.assistant_audio_chunk_size = 0
+        self.no_questions = 0
+    
+    def add_person_audio_chunk(self, audio_chunk):
+        self.person_audio_chunk_size += len(audio_chunk)
+    
+    def add_assistant_audio_chunk(self, audio_chunk):
+        self.assistant_audio_chunk_size += len(audio_chunk)
+    
+    def get_ratio(self):
+        return self.person_audio_chunk_size / self.assistant_audio_chunk_size
+    
+    def question_tracker(self, transcript):
+        # Check if the user asked a question
+        if "?" in transcript:
+            self.no_questions += 1
+    
+    def get_no_questions(self):
+        return self.no_questions
+
 class RealtimeAssistant:
     def __init__(self, api_key=None, model="gpt-4o-realtime-preview-2024-12-17",
                  format=pyaudio.paInt16, channels=1, rate=24000, chunk=1024,
@@ -31,6 +54,7 @@ class RealtimeAssistant:
         self.playback_start = 0  # Total duration of played audio in ms
         self.pause_for_user = False
 
+
         # Audio configuration
         self.format = format
         self.channels = channels
@@ -39,12 +63,12 @@ class RealtimeAssistant:
         self.silence_frames = int(silence_duration * rate / chunk)
         
         # Voice activity detection
-        self.energy_threshold = energy_threshold
-        self.dynamic_thresholding = dynamic_thresholding
-        self.energy_window = deque(maxlen=10)  # 10-chunk (~100ms) moving average
-        self.silence_counter = 0
-        self.is_speaking = False
-        self.audio_buffer = []
+        # self.energy_threshold = energy_threshold
+        # self.dynamic_thresholding = dynamic_thresholding
+        # self.energy_window = deque(maxlen=10)  # 10-chunk (~100ms) moving average
+        # self.silence_counter = 0
+        # self.is_speaking = False
+        # self.audio_buffer = []
 
         # Audio file output
         self.output_audio_file = output_audio_file
@@ -60,6 +84,12 @@ class RealtimeAssistant:
         self.playback_thread = None
         self.is_recording = False
 
+        ######### TMP ##################
+        self.I1 = "Talk like Yoda"
+        self.I2 = "Talk like a pirate"
+
+        ##############################
+
         # WebSocket connection
         self.ws = websocket.WebSocketApp(
             self.url,
@@ -69,6 +99,11 @@ class RealtimeAssistant:
             on_error=lambda ws, error: self.on_error(ws, error),
             on_close=lambda ws, code, msg: self.on_close(ws, code, msg),
         )
+    def swap_instructions(self):
+        tmp = self.I1
+        self.I1 = self.I2
+        self.I2 = tmp
+        self.update_instructions(self.I1)
 
     def run(self):
         """Start the real-time assistant connection."""
@@ -133,6 +168,8 @@ class RealtimeAssistant:
         elif data["type"] == "input_audio_buffer.speech_stopped":
             print("Speech ended")
             self.pause_for_user = False
+            self.swap_instructions()
+
         elif data["type"] == "response.done":
             print("Response generation completed.")
             self.current_response_id = None
@@ -151,10 +188,24 @@ class RealtimeAssistant:
                 
         elif data["type"] == "error":
             print(f"Error: {data['error']['message']}")
+
+        elif data["type"] == "response.audio_transcript.delta":
+            print(f"Transcript: {data['delta']}")
+
             
         else:
-            # print(f"Unhandled message type: {data['type']}")
+            print(f"Unhandled message type: {data['type']}")
             pass
+
+    def update_instructions(self, instructions):
+        """Update the session instructions."""
+        event = {
+            "type": "session.update",
+            "session": {
+                "instructions": instructions,
+            },
+        }
+        self.ws.send(json.dumps(event))
 
     def record_and_send_audio(self):
         """Continuously record audio with voice activity detection."""
@@ -171,31 +222,9 @@ class RealtimeAssistant:
             while self.is_recording:
                 # Read audio chunk
                 audio_data = input_stream.read(self.chunk, exception_on_overflow=False)
-                
-                # # Calculate energy and detect speech
-                # energy, avg_energy = self.calculate_energy(audio_data)
-                # is_speech = avg_energy > self.energy_threshold
 
-                # State machine for speech detection
-                # self.silence_counter = 0
-                # if not self.is_speaking:
-                #     print("\nSpeech started")
-                #     # send interupt event
-                #     self.send_interrupt_event()
-                #     self.is_speaking = True
-                # self.audio_buffer.append(audio_data)
+                # Calculate energy and detect speech
                 self.send_audio(audio_data)
-                # else:
-                #     if self.is_speaking:
-                #         self.silence_counter += 1
-                #         if self.silence_counter >= self.silence_frames:
-                #             print("\nSpeech ended - sending audio")
-                #             self.send_buffered_audio()
-                #             self.is_speaking = False
-                #             self.silence_counter = 0
-
-                # Print energy levels (optional)
-                # print(f"\rCurrent: {energy:.1f} | Avg: {avg_energy:.1f} | Thresh: {self.energy_threshold:.1f}", end="")
 
         except Exception as e:
             if self.is_recording:
@@ -204,7 +233,6 @@ class RealtimeAssistant:
             if input_stream:
                 input_stream.stop_stream()
                 input_stream.close()
-
 
     def send_audio(self,audio_chunk):
         """Send accumulated audio and clear buffer."""
