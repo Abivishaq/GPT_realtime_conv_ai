@@ -268,8 +268,8 @@ class RealtimeAssistant:
         elif data["type"] == "input_audio_buffer.speech_stopped":
             print("Speech ended")
             self.pause_for_user = False
-            ratio = self.interaction_analyzer.get_ratio()
-            print(f"Ratio of user to assistant audio: {ratio}")
+            # ratio = self.interaction_analyzer.get_ai_ratio()
+            # print(f"Ratio of user to assistant audio: {ratio}")
             self.swap_instructions()
 
         elif data["type"] == "response.done":
@@ -297,10 +297,11 @@ class RealtimeAssistant:
             # self.interaction_analyzer.add_assistant_audio_chunk(data['delta'])
             
         else:
-            # print(f"Unhandled message type: {data['type']}")
+            print(f"Unhandled message type: {data['type']}")
             pass
 
     def update_instructions(self, instructions):
+        # print("###################################")
         """Update the session instructions."""
         event = {
             "type": "session.update",
