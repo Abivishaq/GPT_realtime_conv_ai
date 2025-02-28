@@ -13,8 +13,14 @@ from jiboROS import JiboROS
 
 
 ### Global configuration
-variant = "None"
-
+variant = "Static"
+basic_prompt = "Play the role of a robot called Jibo. \
+    You are specifically called Alex. Be proactive and engage the user, \
+    keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. \
+        About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. \
+                Cannot do any tasks it is a simple embodied conversational agent.\
+        FOLLOW THESE INSTRUCTIONS: Wait for the user to respond before you speak. Use mms and ahh or other acknoledgement sounds when user is describing things."
+basic_prompt = "Talk less. Ask one question at a time. wait for the user to respond before you speak. Guide the conversation ask the user about their hobbies or interest."
 class Logger:
     def __init__(self):
         # get log no
@@ -183,8 +189,8 @@ class RealtimeAssistant:
         ######### TMP ##################
         # self.I1 = "Talk like Yoda"
         # self.I2 = "Talk like a pirate"
-        self.I1 = 'only reply in one word'
-        self.I2 = self.I1 #'reply in full sentences'
+        # self.I1 = 'only reply in one word'
+        # self.I2 = self.I1 #'reply in full sentences'
         ##############################
 
         # WebSocket connection
@@ -196,11 +202,11 @@ class RealtimeAssistant:
             on_error=lambda ws, error: self.on_error(ws, error),
             on_close=lambda ws, code, msg: self.on_close(ws, code, msg),
         )
-    def swap_instructions(self):
-        tmp = self.I1
-        self.I1 = self.I2
-        self.I2 = tmp
-        self.update_instructions(self.I1)
+    # def swap_instructions(self):
+    #     tmp = self.I1
+    #     self.I1 = self.I2
+    #     self.I2 = tmp
+    #     self.update_instructions(self.I1)
     
 
     def run(self):
@@ -230,7 +236,7 @@ class RealtimeAssistant:
             "type": "session.update",
             "session": {
                 "modalities": ["audio", "text"],
-                "instructions": "Play the role of a robot called Jibo. You are specifically called Alex. Be proactive and engage the user, keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. Cannot do any tasks it is a simple embodied conversational agent.",
+                "instructions": basic_prompt,
                 "turn_detection": {
                     "type": "server_vad",
                     "threshold": 0.7,
