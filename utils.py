@@ -8,6 +8,12 @@ class Logger:
         self.variant = variant
         # get log no
         log_no_txt_fn = os.path.join(os.path.dirname(__file__), "logs", "log_no.txt")
+        
+        if not os.path.exists(log_no_txt_fn):
+            log_fold = os.path.join(os.path.dirname(__file__), "logs")
+            os.makedirs(log_fold, exist_ok=True)
+            with open(log_no_txt_fn, "w") as f:
+                f.write("0")
         with open(log_no_txt_fn, "r") as f:
             self.log_no = int(f.read())
         self.log_no += 1
