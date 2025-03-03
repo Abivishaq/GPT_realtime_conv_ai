@@ -10,60 +10,79 @@ import numpy as np
 from collections import deque
 import time
 from jiboROS import JiboROS
+from utils import Logger, AudioRecorder
 
 
 ### Global configuration
 variant = "Static"
+# basic_prompt = "Play the role of a robot called Jibo. \
+#     You are specifically called Alex. Be proactive and engage the user, \
+#     keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. \
+#         About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. \
+#                 Cannot do any tasks it is a simple embodied conversational agent.\
+#         FOLLOW THESE INSTRUCTIONS: Wait for the user to respond before you speak. Use mms and ahh or other acknoledgement sounds when user is describing things."
+
+# basic_prompt = "Play the role of a robot called Jibo. \
+#     You are specifically called Alex. Be proactive and engage the user, \
+#     keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. Avoid offering help since you are a conversational agent. So you focus asking user to help recall things. \
+#     Talk for 1 mins and slowly end the conversation.\
+#     Talk less and try to get the user to shaer more particularly something that requires recalling memory.\
+#         About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. \
+#                 Cannot do any tasks it is a simple embodied conversational agent."
+
 basic_prompt = "Play the role of a robot called Jibo. \
     You are specifically called Alex. Be proactive and engage the user, \
-    keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. \
-        About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. \
-                Cannot do any tasks it is a simple embodied conversational agent.\
-        FOLLOW THESE INSTRUCTIONS: Wait for the user to respond before you speak. Use mms and ahh or other acknoledgement sounds when user is describing things."
-basic_prompt = "Talk less. Ask one question at a time. wait for the user to respond before you speak. Guide the conversation ask the user about their hobbies or interest."
-class Logger:
-    def __init__(self):
-        # get log no
-        log_no_txt_fn = os.path.join(os.path.dirname(__file__), "logs", "log_no.txt")
-        with open(log_no_txt_fn, "r") as f:
-            self.log_no = int(f.read())
-        self.log_no += 1
-        with open(log_no_txt_fn, "w") as f:
-            f.write(str(self.log_no))
-        
-        # create log folder
-        self.log_folder = os.path.join(os.path.dirname(__file__), "logs", f"log_{self.log_no}")
-        os.makedirs(self.log_folder, exist_ok=True)
-        
-        # creta metadata file
-        metadata_fn = os.path.join(self.log_folder, "metadata.txt")
-        with open(metadata_fn, "w") as f:
-            f.write("Log created at: " + time.ctime())
-            f.write("\n\n")
-            f.write("Log no: " + str(self.log_no))
-            f.write("\n\n")
-            f.write("Variant: " + variant)
-            f.write("\n\n")
-        
-        # create transcript file
-        self.transcript_fn = os.path.join(self.log_folder, "transcript.txt")
+    keep the conversation going and don't let it die. You can start of with 'what did you buy in last grocery?' and naturally go with the conversation flow. Avoid offering help since you are a conversational agent. So you focus asking user to help recall things. \
+    Talk for 1 mins and slowly end the conversation.\
+    Talk less and try to get the user to share more particularly something that requires recalling memory.\
+        About Jibo: Can engage only engage in coversations. And moves aroud randomly while talking. \
+                Cannot do any tasks it is a simple embodied conversational agent."
 
-        # create Audio file
-        self.assisant_audio_fn = os.path.join(self.log_folder, "assistant_audio.wav")
-        self.mic_audio_fn = os.path.join(self.log_folder, "mic_audio.wav")
-        self.assisant_audio_recorder = AudioRecorder(self.assisant_audio_fn)
-        self.mic_audio_recorder = AudioRecorder(self.mic_audio_fn)
+
+# basic_prompt = "Talk less. Ask one question at a time. wait for the user to respond before you speak. Guide the conversation ask the user about their hobbies or interest."
+# class Logger:
+#     def __init__(self):
+#         # get log no
+#         log_no_txt_fn = os.path.join(os.path.dirname(__file__), "logs", "log_no.txt")
+#         with open(log_no_txt_fn, "r") as f:
+#             self.log_no = int(f.read())
+#         self.log_no += 1
+#         with open(log_no_txt_fn, "w") as f:
+#             f.write(str(self.log_no))
+        
+#         # create log folder
+#         self.log_folder = os.path.join(os.path.dirname(__file__), "logs", f"log_{self.log_no}")
+#         os.makedirs(self.log_folder, exist_ok=True)
+        
+#         # creta metadata file
+#         metadata_fn = os.path.join(self.log_folder, "metadata.txt")
+#         with open(metadata_fn, "w") as f:
+#             f.write("Log created at: " + time.ctime())
+#             f.write("\n\n")
+#             f.write("Log no: " + str(self.log_no))
+#             f.write("\n\n")
+#             f.write("Variant: " + variant)
+#             f.write("\n\n")
+        
+#         # create transcript file
+#         self.transcript_fn = os.path.join(self.log_folder, "transcript.txt")
+
+#         # create Audio file
+#         self.assisant_audio_fn = os.path.join(self.log_folder, "assistant_audio.wav")
+#         self.mic_audio_fn = os.path.join(self.log_folder, "mic_audio.wav")
+#         self.assisant_audio_recorder = AudioRecorder(self.assisant_audio_fn)
+#         self.mic_audio_recorder = AudioRecorder(self.mic_audio_fn)
     
-    def log_transcript(self, transcript):
-        with open(self.transcript_fn, "a") as f:
-            f.write(transcript)
-            f.write("\n")
+#     def log_transcript(self, transcript):
+#         with open(self.transcript_fn, "a") as f:
+#             f.write(transcript)
+#             f.write("\n")
         
-    def log_assistant_audio(self, audio_chunk):
-        self.assisant_audio_recorder.save_chunk(audio_chunk)
+#     def log_assistant_audio(self, audio_chunk):
+#         self.assisant_audio_recorder.save_chunk(audio_chunk)
 
-    def log_mic_audio(self, audio_chunk):
-        self.mic_audio_recorder.save_chunk(audio_chunk)
+#     def log_mic_audio(self, audio_chunk):
+#         self.mic_audio_recorder.save_chunk(audio_chunk)
         
 
 class AudioRecorder:
@@ -123,8 +142,9 @@ class InteractionAnalyzer:
         return self.no_questions
     
     def close(self):
-        self.person_recorder.close()
-        self.assistant_recorder.close()
+        pass
+        # self.person_recorder.close()
+        # self.assistant_recorder.close()
     
 class JiboHandler:
     def __init__(self):
@@ -147,7 +167,7 @@ class RealtimeAssistant:
         if not self.api_key:
             raise ValueError("API key must be provided or set in environment variables.")
         
-        self.logger = Logger()
+        self.logger = Logger(variant=variant)
 
         self.url = f"wss://api.openai.com/v1/realtime?model={model}"
         self.headers = [
@@ -300,6 +320,7 @@ class RealtimeAssistant:
         elif data["type"] == "response.audio_transcript.delta":
             # print(f"Transcript: {data['delta']}")
             self.jibo.add_text(data['delta'])
+            self.logger.log_transcript(data['delta'])
             # self.interaction_analyzer.add_assistant_audio_chunk(data['delta'])
             
         else:

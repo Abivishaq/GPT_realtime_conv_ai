@@ -11,79 +11,86 @@ from collections import deque
 import time
 from jiboROS import JiboROS
 
+from utils import Logger, AudioRecorder
+
 
 ### Global configuration
 variant = "Dynamic"
-base_prompt = "Play the role of a robot called Jibo. You are specifically called Alex. Be proactive and engage the user, keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. Cannot do any tasks it is a simple embodied conversational agent."
+# base_prompt = "Play the role of a robot called Jibo. You are specifically called Alex. Be proactive and engage the user, keep the conversation going and don't let it die. You can start of with hobbies and naturally go with the conversation flow. About Jibo: Can engange only engage in coversations. And moves aroud randomly while talking. Cannot do any tasks it is a simple embodied conversational agent."
+base_prompt = "Play the role of a robot called Jibo. \
+    You are specifically called Alex. Be proactive and engage the user, \
+    keep the conversation going and don't let it die. You can start of with 'what did you buy in last grocery?' and naturally go with the conversation flow. Avoid offering help since you are a conversational agent. So you focus asking user to help recall things. \
+    Talk for 15 mins and slowly end the conversation.\
+    Talk less and try to get the user to share more particularly something that requires recalling memory.\
+        About Jibo: Can engage only engage in coversations. And moves aroud randomly while talking. \
+                Cannot do any tasks it is a simple embodied conversational agent."
+# class Logger:
+#     def __init__(self):
+#         # get log no
+#         log_no_txt_fn = os.path.join(os.path.dirname(__file__), "logs", "log_no.txt")
+#         with open(log_no_txt_fn, "r") as f:
+#             self.log_no = int(f.read())
+#         self.log_no += 1
+#         with open(log_no_txt_fn, "w") as f:
+#             f.write(str(self.log_no))
+        
+#         # create log folder
+#         self.log_folder = os.path.join(os.path.dirname(__file__), "logs", f"log_{self.log_no}")
+#         os.makedirs(self.log_folder, exist_ok=True)
+        
+#         # creta metadata file
+#         metadata_fn = os.path.join(self.log_folder, "metadata.txt")
+#         with open(metadata_fn, "w") as f:
+#             f.write("Log created at: " + time.ctime())
+#             f.write("\n\n")
+#             f.write("Log no: " + str(self.log_no))
+#             f.write("\n\n")
+#             f.write("Variant: " + variant)
+#             f.write("\n\n")
+        
+#         # create transcript file
+#         self.transcript_fn = os.path.join(self.log_folder, "transcript.txt")
 
-class Logger:
-    def __init__(self):
-        # get log no
-        log_no_txt_fn = os.path.join(os.path.dirname(__file__), "logs", "log_no.txt")
-        with open(log_no_txt_fn, "r") as f:
-            self.log_no = int(f.read())
-        self.log_no += 1
-        with open(log_no_txt_fn, "w") as f:
-            f.write(str(self.log_no))
-        
-        # create log folder
-        self.log_folder = os.path.join(os.path.dirname(__file__), "logs", f"log_{self.log_no}")
-        os.makedirs(self.log_folder, exist_ok=True)
-        
-        # creta metadata file
-        metadata_fn = os.path.join(self.log_folder, "metadata.txt")
-        with open(metadata_fn, "w") as f:
-            f.write("Log created at: " + time.ctime())
-            f.write("\n\n")
-            f.write("Log no: " + str(self.log_no))
-            f.write("\n\n")
-            f.write("Variant: " + variant)
-            f.write("\n\n")
-        
-        # create transcript file
-        self.transcript_fn = os.path.join(self.log_folder, "transcript.txt")
-
-        # create Audio file
-        self.assisant_audio_fn = os.path.join(self.log_folder, "assistant_audio.wav")
-        self.mic_audio_fn = os.path.join(self.log_folder, "mic_audio.wav")
-        self.assisant_audio_recorder = AudioRecorder(self.assisant_audio_fn)
-        self.mic_audio_recorder = AudioRecorder(self.mic_audio_fn)
+#         # create Audio file
+#         self.assisant_audio_fn = os.path.join(self.log_folder, "assistant_audio.wav")
+#         self.mic_audio_fn = os.path.join(self.log_folder, "mic_audio.wav")
+#         self.assisant_audio_recorder = AudioRecorder(self.assisant_audio_fn)
+#         self.mic_audio_recorder = AudioRecorder(self.mic_audio_fn)
     
-    def log_transcript(self, transcript):
-        with open(self.transcript_fn, "a") as f:
-            f.write(transcript)
-            f.write("\n")
+#     def log_transcript(self, transcript):
+#         with open(self.transcript_fn, "a") as f:
+#             f.write(transcript)
+#             f.write("\n")
         
-    def log_assistant_audio(self, audio_chunk):
-        self.assisant_audio_recorder.save_chunk(audio_chunk)
+#     def log_assistant_audio(self, audio_chunk):
+#         self.assisant_audio_recorder.save_chunk(audio_chunk)
 
-    def log_mic_audio(self, audio_chunk):
-        self.mic_audio_recorder.save_chunk(audio_chunk)
+#     def log_mic_audio(self, audio_chunk):
+#         self.mic_audio_recorder.save_chunk(audio_chunk)
+    
+#     def close(self):
+#         self.assisant_audio_recorder.close()
+#         self.mic_audio_recorder.close()
+
+# class AudioRecorder:
+#     def __init__(self, filename="output.wav", format=pyaudio.paInt16, channels=1, rate=24000):
+#         self.filename = filename
+#         self.format = format
+#         self.channels = channels
+#         self.rate = rate
         
+#         self.wav_file = wave.open(self.filename, "wb")
+#         self.wav_file.setnchannels(self.channels)
+#         self.wav_file.setsampwidth(pyaudio.PyAudio().get_sample_size(self.format))
+#         self.wav_file.setframerate(self.rate)
 
-class AudioRecorder:
-    def __init__(self, filename="output.wav", format=pyaudio.paInt16, channels=1, rate=24000):
-        self.filename = filename
-        self.format = format
-        self.channels = channels
-        self.rate = rate
-        
-        self.wav_file = wave.open(self.filename, "wb")
-        self.wav_file.setnchannels(self.channels)
-        self.wav_file.setsampwidth(pyaudio.PyAudio().get_sample_size(self.format))
-        self.wav_file.setframerate(self.rate)
+#     def save_chunk(self, audio_chunk):
+#         """Write an audio chunk to the WAV file."""
+#         self.wav_file.writeframes(audio_chunk)
 
-    def save_chunk(self, audio_chunk):
-        """Write an audio chunk to the WAV file."""
-        self.wav_file.writeframes(audio_chunk)
-
-    def close(self):
-        """Close the WAV file."""
-        self.wav_file.close()
-
-
-
-
+#     def close(self):
+#         """Close the WAV file."""
+#         self.wav_file.close()
 
 class InteractionAnalyzer:
     def __init__(self):
@@ -91,6 +98,8 @@ class InteractionAnalyzer:
         self.assistant_audio_chunk_size = 1 # just to avoid division by zero
         self.no_questions = 0
         self.no_user_inputs = 0
+        self.time_start = time.time()
+        self.target_time = 60*14 # 15 mins
         # self.mic_recorder = AudioRecorder("mic_audio.wav")
         # self.assistant_recorder = AudioRecorder("assistant_audio.wav")
     
@@ -128,11 +137,16 @@ class InteractionAnalyzer:
         # length control
         instructions = ""
         ai_ratio = self.get_ai_ratio()
-
+        time_now = time.time()
+        if time_now - self.time_start > self.target_time:
+            instructions += "You have been talking for too long. Try to wrap up the conversation. Say bye."
+            print("#"*50)
+            print("Time to wrap up")
+            print("#"*50)
         if ai_ratio > 0.3:
             instructions += "Talk less and try to get the user to talk more."
         if ai_ratio < 0.2:
-            instructions += "Talk more and try to engage the user more but let the suer control the conversation."
+            instructions += "Talk more and try to engage the user more but let the user control the conversation."
 
         question_ratio = self.get_question_ratio()
         if question_ratio > 0.5:
@@ -142,12 +156,12 @@ class InteractionAnalyzer:
 
         instructions = base_prompt + instructions
         return instructions
-        
-
-    def close(self):
-        self.person_recorder.close()
-        self.assistant_recorder.close()
     
+    def close(self):
+        pass
+        # self.person_recorder.close()
+        # self.assistant_recorder.close()
+
 class JiboHandler:
     def __init__(self):
         # self.jibo_ros = JiboROS()
@@ -169,13 +183,15 @@ class RealtimeAssistant:
         if not self.api_key:
             raise ValueError("API key must be provided or set in environment variables.")
         
-        self.logger = Logger()
+        self.logger = Logger(variant= variant)
 
         self.url = f"wss://api.openai.com/v1/realtime?model={model}"
         self.headers = [
             f"Authorization: Bearer {self.api_key}",
             "OpenAI-Beta: realtime=v1",
         ]
+
+        self.time_start = time.time()
 
         self.jibo = JiboHandler()
         self.interaction_analyzer = InteractionAnalyzer()
@@ -298,8 +314,8 @@ class RealtimeAssistant:
         elif data["type"] == "input_audio_buffer.speech_stopped":
             print("Speech ended")
             self.pause_for_user = False
-            ratio = self.interaction_analyzer.get_ratio()
-            print(f"Ratio of user to assistant audio: {ratio}")
+            # ratio = self.interaction_analyzer.get_ratio()
+            # print(f"Ratio of user to assistant audio: {ratio}")
             instructions = self.interaction_analyzer.get_updated_instructions()
             self.update_instructions(instructions)
             self.interaction_analyzer.update_user_input_count()
@@ -327,6 +343,7 @@ class RealtimeAssistant:
         elif data["type"] == "response.audio_transcript.delta":
             # print(f"Transcript: {data['delta']}")
             self.jibo.add_text(data['delta'])
+            self.logger.log_transcript(data['delta'])
             # self.interaction_analyzer.add_assistant_audio_chunk(data['delta'])
             
         else:
