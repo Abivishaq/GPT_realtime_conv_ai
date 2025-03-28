@@ -9,7 +9,7 @@ import queue
 import numpy as np
 from collections import deque
 import time
-from jiboROS import JiboROS
+# from jiboROS import JiboROS
 from utils import Logger, AudioRecorder
 
 
