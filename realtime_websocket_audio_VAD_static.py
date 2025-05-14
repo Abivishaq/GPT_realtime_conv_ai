@@ -167,6 +167,8 @@ class RealtimeAssistant:
                  format=pyaudio.paInt16, channels=1, rate=24000, chunk=1024,
                  output_audio_file="output_audio.wav", silence_duration=0.8,
                  energy_threshold=500, dynamic_thresholding=True):
+        
+        self.should_exit = False
         self.api_key = api_key or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("API key must be provided or set in environment variables.")
@@ -387,7 +389,7 @@ class RealtimeAssistant:
     def playback_audio(self):
         """Continuously play audio from the playback queue."""
         try:
-            while True:
+            while not self.should_exit:
                 if self.pause_for_user:
                     #clear the queue
                     # print("Pausing audio")
@@ -418,16 +420,48 @@ class RealtimeAssistant:
 
     def on_close(self, ws, close_status_code, close_msg):
         """Handle WebSocket connection closing."""
-        print("\nConnection closed.")
-        self.is_recording = False
+        self.cleanup()
+        # print("\nConnection closed.")
+        # self.is_recording = False
         
-        # Cleanup threads
+        # # Cleanup threads
+        # if self.recording_thread and self.recording_thread.is_alive():
+        #     self.recording_thread.join()
+
+        # if self.playback_thread and self.playback_thread.is_alive():
+        #     self.playback_queue.put(None)
+        #     self.playback_thread.join()
+
+        # # Close audio resources
+        # if self.wav_file:
+        #     self.wav_file.close()
+        # if self.audio_stream:
+        #     self.audio_stream.stop_stream()
+        #     self.audio_stream.close()
+        # self.p.terminate()
+        # self.interaction_analyzer.close()
+        # print("Audio resources released.")
+    
+    def cleanup(self):
+        print("\nCleaning up...")
+        self.should_exit = True
+        self.is_recording = False
+
+        # Stop and join recording thread
         if self.recording_thread and self.recording_thread.is_alive():
             self.recording_thread.join()
 
+        # Stop and join playback thread
         if self.playback_thread and self.playback_thread.is_alive():
             self.playback_queue.put(None)
             self.playback_thread.join()
+
+        # Close WebSocket
+        if self.ws:
+            try:
+                self.ws.close()
+            except:
+                pass
 
         # Close audio resources
         if self.wav_file:
@@ -437,7 +471,7 @@ class RealtimeAssistant:
             self.audio_stream.close()
         self.p.terminate()
         self.interaction_analyzer.close()
-        print("Audio resources released.")
+        print("Cleanup complete.")
 
 if __name__ == "__main__":
     assistant = RealtimeAssistant(
@@ -449,4 +483,5 @@ if __name__ == "__main__":
         assistant.run()
     except KeyboardInterrupt:
         print("\nInterrupted by user")
-        assistant.ws.close()
+        # assistant.ws.close()
+        assistant.cleanup()

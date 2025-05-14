@@ -9,9 +9,13 @@ import queue
 import numpy as np
 from collections import deque
 import time
-# from jiboROS import JiboROS
+from jiboROS import JiboROS
 
 from utils import Logger, AudioRecorder
+
+from interaction_analyzer import InteractionAnalyzer
+
+from prompts import base_prompt
 
 
 ### Global configuration
@@ -25,9 +29,9 @@ variant = "Dynamic"
 #         About Jibo: Can engage only engage in coversations. And moves aroud randomly while talking. \
 #                 Cannot do any tasks it is a simple embodied conversational agent."
 
-Topic_1 = "What did you buy in last grocery?"
-Topic_2 = "What is your favorite food?"
-Topic_3 = "What is your favorite movie?"
+# Topic_1 = "What did you buy in last grocery?"
+# Topic_2 = "What is your favorite food?"
+# Topic_3 = "What is your favorite movie?"
 # A_connect_prompt = f"You are an moderator and is within a phone call session with the user. The user is an old person, who\
 #                     might have Mild Cognitive Impairment (MCI). Follow the below instructions to be a nice, patiently and\
 #                     helpful moderator that stimulate the user's memory and help execute cognitive functions.\n\
@@ -44,109 +48,21 @@ Topic_3 = "What is your favorite movie?"
 #                                 - You should stimulate the user's memory (by using reminiscence of old events in their lives, as well as \
 #                                     recalling the topic discussed earlier in the session). For example, kindly ask him if he/she remember \
 #                                     earlier events related to the current topic. // This is to help improve the patient's cognitive ability."
-base_prompt = f"""You are an conversational robot having a conversation with the user. Play the role of a real person called Sam.
-You are very cheerful happy and eloquent speaker. You can carry out conversations smoothly.
-Follow the below instructions to be a nice, patient and helpful conversational robot.
-You should follow these steps in your conversation:
-    0. Warm up by asking the name of the user gently and nicely. Then remember to call him/her by name.
-        - Once the user is engaged in conversation, smoothly transition into a topic selection.
-		- Avoid abrupt transitions. Instead, connect the topics naturally to what was previously discussed.
-    1. After few rounds of warm up, you have to ask the user to make selection of the following three topics:
-        (1) {Topic_1}, 
-        (2) {Topic_2} and 
-        (3) {Topic_3}. 
-"""#A_connect_prompt
+
+#A_connect_prompt
 # base_prompt = "Take the role of Sheldon Cooper meeting a new person for the first time."
 
-class InteractionAnalyzer:
-    def __init__(self):
-        self.mic_audio_chunk_size = 0
-        self.assistant_audio_chunk_size = 1 # just to avoid division by zero
-        self.no_questions = 0
-        self.no_user_inputs = 0
-        self.time_start = time.time()
-        self.target_time = 60*14 # 15 mins
-        # self.mic_recorder = AudioRecorder("mic_audio.wav")
-        # self.assistant_recorder = AudioRecorder("assistant_audio.wav")
-    
-    def add_mic_audio_chunk(self, audio_chunk):
-        # print("type of audio_chunk", type(audio_chunk))
-        # check energy of audio_chunk
-        # energy = np.sum(np.frombuffer(audio_chunk, dtype=np.int16)**2)
-        # print("energy", energy)
-        self.mic_audio_chunk_size += len(audio_chunk)
-        # self.mic_recorder.save_chunk(audio_chunk)
-    
-    def add_assistant_audio_chunk(self, audio_chunk):
-        # print("type of audio_chunk", type(audio_chunk))
-        self.assistant_audio_chunk_size += len(audio_chunk)
-        # self.assistant_recorder.save_chunk(audio_chunk)
-    
-    def get_ai_ratio(self):
-        return(self.assistant_audio_chunk_size/self.mic_audio_chunk_size)
-    
-    def question_tracker(self, transcript):
-        # Check if the user asked a question
-        if "?" in transcript:
-            self.no_questions += 1
-    
-    def update_user_input_count(self):
-        self.no_user_inputs += 1
-    
-    def get_question_ratio(self):
-        if self.no_user_inputs == 0:
-            # raise ValueError("No user inputs recorded yet.")
-            print("No user inputs recorded yet.")
-            return 0
-        return self.no_questions/self.no_user_inputs
-        # return self.no_questions
-    
-    def get_updated_instructions(self):
-        # length control
-        instructions = ""
-        ai_ratio = self.get_ai_ratio()
-        print("ai_ratio", ai_ratio)
-        time_now = time.time()
-        # if time_now - self.time_start > self.target_time :
-        #     instructions += "You have been talking for too long. Try to wrap up the conversation. Say bye."
-        #     print("#"*50)
-        #     print("Time to wrap up")
-        #     print("#"*50)
-        ai_ratio_threshold = 0.5
-        if ai_ratio > ai_ratio_threshold:
-            instructions += "RESPOND WITH ONLY ONE SENTENCE WITH A MAXIMUM OF 10 WORDS."
-            # instructions += "Speak like a pirate."
-            print("#"*50)
-            print("It is in speak less mode:")
-        else:
-            instructions += "Try to share a experience."
-            # instructions += "talk like a pirate"
-            print("*"*50)
-            print("It is in speak more mode:")
-        # question_ratio = self.get_question_ratio()
-        # print("question_ratio", question_ratio)
-        # if question_ratio > 0.5:
-        #     instructions += "Don't ask a question."
-        # if question_ratio < 0.3:
-        #     instructions += "Ask more questions to keep the conversation going."
 
-        instructions = base_prompt + instructions
-        return instructions
-    
-    def close(self):
-        pass
-        # self.person_recorder.close()
-        # self.assistant_recorder.close()
 
 class JiboHandler:
     def __init__(self):
-        # self.jibo_ros = JiboROS()
+        self.jibo_ros = JiboROS()
         self.txt = ''
     def add_text(self, text):
         self.txt += text
         if ('.' in text) or ('?' in text) or ('!' in text):
             print(self.txt)
-            # self.jibo_ros.send_tts_message(self.txt)
+            self.jibo_ros.send_tts_message(self.txt)
             self.txt = ''
 
 
@@ -171,7 +87,7 @@ class RealtimeAssistant:
         self.time_start = time.time()
 
         self.jibo = JiboHandler()
-        self.interaction_analyzer = InteractionAnalyzer()
+        self.interaction_analyzer = InteractionAnalyzer(self.logger)
 
         self.current_response_id = None
         self.current_assistant_item_id = None
@@ -255,7 +171,7 @@ class RealtimeAssistant:
                 "instructions": base_prompt,
                 "turn_detection": {
                     "type": "server_vad",
-                    "threshold": 0.7,
+                    "threshold": 0.95,
                     "prefix_padding_ms": 300,
                     "silence_duration_ms": 1000
                 },
@@ -280,7 +196,7 @@ class RealtimeAssistant:
         if data["type"] == "response.audio.delta":
             audio_chunk = base64.b64decode(data["delta"])
             self.playback_queue.put(audio_chunk)
-            self.interaction_analyzer.add_assistant_audio_chunk(audio_chunk)
+            # self.interaction_analyzer.add_assistant_audio_chunk(audio_chunk)
             self.logger.log_assistant_audio(audio_chunk)
 
         elif data["type"] == "input_audio_buffer.speech_started":
@@ -322,8 +238,7 @@ class RealtimeAssistant:
             # print(f"Transcript: {data['delta']}")
             self.jibo.add_text(data['delta'])
             self.logger.log_transcript(data['delta'])
-            # self.interaction_analyzer.add_assistant_audio_chunk(data['delta'])
-            
+            self.interaction_analyzer.question_tracker(data['delta'])   
         else:
             # print(f"Unhandled message type: {data['type']}")
             pass
@@ -404,6 +319,7 @@ class RealtimeAssistant:
                 self.playback_position += int(duration_ms)
                 
                 self.audio_stream.write(audio_chunk)
+                self.interaction_analyzer.add_assistant_audio_chunk(audio_chunk)
                 self.wav_file.writeframes(audio_chunk)
                 with open("output_audio.pcm", "ab") as pcm_file:
                     pcm_file.write(audio_chunk)

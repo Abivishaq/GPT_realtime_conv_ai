@@ -42,6 +42,12 @@ class Logger:
         self.mic_audio_fn = os.path.join(self.log_folder, "mic_audio.wav")
         self.assisant_audio_recorder = AudioRecorder(self.assisant_audio_fn)
         self.mic_audio_recorder = AudioRecorder(self.mic_audio_fn)
+
+        # metrics file
+        self.metrics_fn = os.path.join(self.log_folder, "metrics.csv")
+        with open(self.metrics_fn, "w") as f:
+            f.write("turn_number,AI_speaking_ratio,AI_questioning_ratio")
+            f.write("\n")
     
     def log_transcript(self, transcript):
         with open(self.transcript_fn, "a") as f:
@@ -53,6 +59,17 @@ class Logger:
 
     def log_mic_audio(self, audio_chunk):
         self.mic_audio_recorder.save_chunk(audio_chunk)
+    
+    def log_metrics(self, turn_number, AI_speaking_ratio, AI_questioning_ratio):
+        with open(self.metrics_fn, "a") as f:
+            f.write(str(turn_number))
+            f.write(",")
+            f.write(str(AI_speaking_ratio))
+            f.write(",")
+            f.write(str(AI_questioning_ratio))
+            f.write("\n")
+
+        
 
 class AudioRecorder:
     def __init__(self, filename="output.wav", format=pyaudio.paInt16, channels=1, rate=24000):
