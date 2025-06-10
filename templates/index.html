@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Real-Time AI Ratio</title>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body style="margin:0; padding:0; font-family:sans-serif;">
+    <h2 style="text-align:center;">AI/Total Audio Ratio Over Time</h2>
+    <div id="plot" style="width:100%; height:90vh;"></div>
+
+    <script>
+        async function fetchData() {
+            const response = await fetch('/data');
+            const data = await response.json();
+            return {
+                x: data.timestamps,
+                y: data.ratios
+            };
+        }
+
+        async function updatePlot() {
+            const trace = await fetchData();
+            Plotly.react('plot', [{
+                x: trace.x,
+                y: trace.y,
+                type: 'scatter',
+                mode: 'lines+markers',
+                line: {
+                    color: 'red',
+                    width: 4  // <-- Increase line thickness
+                },
+                marker: {
+                    size: 6
+                }
+            }], {
+                title: {
+                    text: 'Real-Time AI Ratio',
+                    font: { size: 32 }  // <-- Title font size
+                },
+                xaxis: {
+                    title: { text: 'Time (s)', font: { size: 24 } },
+                    tickfont: { size: 24 }
+                },
+                yaxis: {
+                    title: { text: 'Ratio', font: { size: 24 } },
+                    tickfont: { size: 24 },
+                    range: [0, 1]
+                },
+                shapes: [
+                    {
+                        type: 'rect',
+                        xref: 'paper',
+                        yref: 'y',
+                        x0: 0,
+                        x1: 1,
+                        y0: 0,
+                        y1: 0.3,
+                        fillcolor: 'lightgreen',
+                        opacity: 0.3,
+                        layer: 'below',
+                        line: { width: 0 }
+                    },
+                    {
+                        type: 'rect',
+                        xref: 'paper',
+                        yref: 'y',
+                        x0: 0,
+                        x1: 1,
+                        y0: 0.3,
+                        y1: 1,
+                        fillcolor: 'lightcoral',
+                        opacity: 0.3,
+                        layer: 'below',
+                        line: { width: 0 }
+                    }
+                ]
+            });            
+        }
+
+        setInterval(updatePlot, 2000);
+        updatePlot();  // initial call
+    </script>
+</body>
+</html>
