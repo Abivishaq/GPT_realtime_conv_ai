@@ -159,7 +159,7 @@ class JiboTeleop(Node):
             msg.tts_text = speech
             msg.do_volume = True
             # msg.volume = 1.0
-            msg.volume = 0.1
+            msg.volume = 0.001
             self.jibo_pub.publish(msg)
             # self.get_logger().info(str(msg))
 
